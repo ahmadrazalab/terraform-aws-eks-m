@@ -1,31 +1,46 @@
-module "eks" {
-  source          = "terraform-aws-modules/eks/aws"
-  version         = "20.8.4"
-  cluster_name    = local.cluster_name
-  cluster_version = var.kubernetes_version
-  subnet_ids      = module.vpc.private_subnets
+resource "aws_eks_cluster" "prod_cluster" {
+  name     = var.cluster_name
+  version  = var.cluster_version
+  role_arn = aws_iam_role.cluster_role.arn
 
-  enable_irsa = true
-
-  tags = {
-    cluster = "demo"
+  vpc_config {
+    subnet_ids         = data.aws_subnets.private.ids
+    security_group_ids = [aws_security_group.cluster_sg.id]
+    endpoint_private_access = true    # Enable private access if needed
+    endpoint_public_access  = false   # Disable public access if needed
   }
 
-  vpc_id = module.vpc.vpc_id
-
-  eks_managed_node_group_defaults = {
-    ami_type               = "AL2_x86_64"
-    instance_types         = ["t3.medium"]
-    vpc_security_group_ids = [aws_security_group.all_worker_mgmt.id]
+  upgrade_policy {
+    support_type = "STANDARD"  # or "EXTENDED" (default)
   }
 
-  eks_managed_node_groups = {
-
-    node_group = {
-      min_size     = 2
-      max_size     = 6
-      desired_size = 2
-    }
-  }
+  depends_on = [
+    aws_iam_role_policy_attachment.cluster_policy
+  ]
 }
 
+resource "aws_eks_node_group" "node_group" {
+  cluster_name    = aws_eks_cluster.prod_cluster.name
+  node_group_name = "${var.cluster_name}-node-group"
+  node_role_arn   = aws_iam_role.node_role.arn
+  subnet_ids      = data.aws_subnets.private.ids
+  instance_types  = [var.instance_type]
+
+  scaling_config {
+    desired_size = 2
+    max_size     = 3
+    min_size     = 1
+  }
+
+  update_config {
+    max_unavailable = 1
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.node_policy
+  ]
+
+  tags = {
+    Name = "${var.cluster_name}-node-group"
+  }
+}

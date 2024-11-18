@@ -1,14 +1,14 @@
-variable "kubernetes_version" {
-  default     = 1.27
-  description = "kubernetes version"
+variable "cluster_name" {
+  default = "prod-chat"
+  type    = string
 }
 
-variable "vpc_cidr" {
-  default     = "10.0.0.0/16"
-  description = "default CIDR range of the VPC"
-}
-variable "aws_region" {
-  default = "us-west-1"
-  description = "aws region"
+variable "cluster_version" {
+  default = "1.28"
+  type    = string
 }
 
+variable "instance_type" {
+  default = "t3a.medium"
+  type    = string
+}
