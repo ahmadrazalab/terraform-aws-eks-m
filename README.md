@@ -1,34 +1,174 @@
-# terraform-eks
-A sample repository to create EKS on AWS using Terraform.
+### README for EKS Terraform Module
 
-### Install AWS CLI 
+---
 
-As the first step, you need to install AWS CLI as we will use the AWS CLI (`aws configure`) command to connect Terraform with AWS in the next steps.
+# EKS Terraform Module
 
-Follow the below link to Install AWS CLI.
+This Terraform module provisions an **Amazon Elastic Kubernetes Service (EKS)** cluster with essential configurations, node groups, and managed add-ons. It is designed to be reusable and customizable, making it easy to integrate into other Terraform projects.
+
+---
+
+## Features
+
+- **EKS Cluster**: Creates an EKS cluster with private subnets and customizable logging.
+- **IAM Roles**: Automatically provisions IAM roles for the cluster and node groups.
+- **Managed Add-Ons**: Supports EKS add-ons like `kube-proxy`, `vpc-cni`, `coredns`, and `eks-pod-identity-agent`.
+- **Node Groups**: Configures auto-scaling node groups with custom IAM policies and subnet support.
+
+---
+
+## Usage
+
+Include this module in your Terraform code:
+
+```hcl
+module "eks_cluster" {
+  source                  = "./path-to-your-eks-module"
+  eks_cluster_role_arn    = "arn:aws:iam::123456789012:role/eks-cluster-role"
+  private_subnet_ids      = ["subnet-0198d10b83f4389a0", "subnet-0f4566efb7ac51c04", "subnet-0dfd99820b62e7ae7"]
+  enabled_cluster_log_types = ["api", "audit"]
+  cluster_tags            = {
+    Name = "My Custom EKS Cluster"
+    Env  = "production"
+  }
+  node_group_policies     = [
+    "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
+    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  ]
+  node_group_desired_size = 2
+  node_group_max_size     = 5
+  node_group_min_size     = 1
+  node_group_max_unavailable = 2
+  node_group_tags = {
+    Name = "Custom EKS Node Group"
+    Env  = "production"
+  }
+}
 ```
-https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+
+---
+
+## Inputs
+
+The module accepts the following input variables:
+
+| Name                       | Type         | Default                                                   | Description                                                                                     |
+|----------------------------|--------------|-----------------------------------------------------------|-------------------------------------------------------------------------------------------------|
+| `eks_cluster_role_arn`     | `string`     | **Required**                                              | IAM role ARN for the EKS cluster.                                                              |
+| `private_subnet_ids`       | `list(string)` | **Required**                                              | List of private subnet IDs for the EKS cluster.                                                |
+| `enabled_cluster_log_types`| `list(string)` | `[]`                                                      | List of log types to enable for the EKS cluster.                                               |
+| `cluster_tags`             | `map(string)` | `{ Name = "Premium EKS Cluster", Env = "development" }`   | Tags to apply to the EKS cluster.                                                              |
+| `node_group_policies`      | `list(string)` | See default                                               | List of IAM policies to attach to the EKS node group role.                                      |
+| `node_group_desired_size`  | `number`     | `1`                                                       | Desired size of the node group.                                                                |
+| `node_group_max_size`      | `number`     | `2`                                                       | Maximum size of the node group.                                                                |
+| `node_group_min_size`      | `number`     | `1`                                                       | Minimum size of the node group.                                                                |
+| `node_group_max_unavailable`| `number`    | `1`                                                       | Maximum number of unavailable nodes during updates.                                             |
+| `node_group_tags`          | `map(string)` | `{ Name = "Premium EKS Node-1", Env = "development" }`    | Tags to apply to the EKS node group.                                                           |
+
+---
+
+## Outputs
+
+The module provides the following outputs:
+
+| Name            | Description                                  |
+|-----------------|----------------------------------------------|
+| `cluster_name`  | The name of the EKS cluster.                 |
+| `cluster_endpoint` | The API endpoint of the EKS cluster.         |
+
+---
+
+## Pre-requisites
+
+1. **IAM Role for the Cluster**  
+   You need to create an IAM role with the following policies attached:
+   - `AmazonEKSClusterPolicy`
+   - `AmazonEKSVPCResourceController`
+
+   Example:
+   ```hcl
+   resource "aws_iam_role" "eks_cluster_role" {
+     name = "eks-cluster-role"
+
+     assume_role_policy = jsonencode({
+       Version = "2012-10-17",
+       Statement = [
+         {
+           Effect = "Allow",
+           Principal = {
+             Service = "eks.amazonaws.com"
+           },
+           Action = "sts:AssumeRole"
+         }
+       ]
+     })
+   }
+
+   resource "aws_iam_role_policy_attachment" "eks_cluster_policies" {
+     for_each = toset([
+       "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
+       "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
+     ])
+
+     role       = aws_iam_role.eks_cluster_role.name
+     policy_arn = each.value
+   }
+   ```
+
+2. **Subnets**  
+   Ensure you have private subnets ready and pass their IDs as `private_subnet_ids` to the module.
+
+---
+
+## Example Deployment
+
+Here’s a complete example:
+
+```hcl
+module "eks_cluster" {
+  source                  = "./eks-module"
+  eks_cluster_role_arn    = "arn:aws:iam::123456789012:role/eks-cluster-role"
+  private_subnet_ids      = ["subnet-0198d10b83f4389a0", "subnet-0f4566efb7ac51c04", "subnet-0dfd99820b62e7ae7"]
+  enabled_cluster_log_types = ["api", "audit"]
+  cluster_tags            = {
+    Name = "Production EKS Cluster"
+    Env  = "production"
+  }
+  node_group_policies     = [
+    "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
+    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+    "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  ]
+  node_group_desired_size = 3
+  node_group_max_size     = 6
+  node_group_min_size     = 2
+  node_group_max_unavailable = 2
+  node_group_tags = {
+    Name = "Production EKS Node Group"
+    Env  = "production"
+  }
+}
 ```
 
-### Install Terraform
+---
 
-Next, Install Terraform using the below link.
-```
-https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
-```
+## Notes
 
-### Connect Terraform with AWS
+- **Region Configuration**: Ensure you configure the AWS provider with the desired region in your Terraform configuration.
+- **Terraform Version**: This module supports Terraform 1.0+ and AWS Provider version `~> 5.0`.
 
-Its very easy to connect Terraform with AWS. Run `aws configure` command and provide the AWS Security credentials as shown in the video.
+---
 
-### Initialize Terraform
+## License
 
-Clone the repository and Run `terraform init`. This will intialize the terraform environment for you and download the modules, providers and other configuration required.
+This module is open-sourced under the MIT license. See `LICENSE` for details.
 
-### Optionally review the terraform configuration
+---
 
-Run `terraform plan` to see the configuration it creates when executed.
+## Contributing
 
-### Finally, Apply terraform configuation to create EKS cluster with VPC 
+Feel free to open issues or submit pull requests to improve the module.
 
-`terraform apply`
+--- 
+
+Let me know if you need any additional details!
