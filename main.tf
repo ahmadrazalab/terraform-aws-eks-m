@@ -1,14 +1,12 @@
-
 resource "random_string" "name_suffix" {
   length  = 6
   upper   = false
   special = false
 }
 
-# Cluster Configuration
 resource "aws_eks_cluster" "premium_cluster" {
   name     = "premium-${random_string.name_suffix.result}"
-  role_arn = aws_iam_role.eks_cluster_role.arn
+  role_arn = var.eks_cluster_role_arn
 
   access_config {
     authentication_mode = "API"
@@ -17,27 +15,22 @@ resource "aws_eks_cluster" "premium_cluster" {
   version = "1.31"
 
   upgrade_policy {
-    support_type = "STANDARD"  # or "EXTENDED" (default)
+    support_type = "STANDARD"
   }
 
-
   vpc_config {
-    subnet_ids              = ["subnet-0198d10b83f4389a0", "subnet-0f4566efb7ac51c04", "subnet-0dfd99820b62e7ae7"] # Replace with your private subnet IDs
+    subnet_ids              = var.private_subnet_ids
     endpoint_private_access = true
     endpoint_public_access  = false
   }
 
   kubernetes_network_config {
-    service_ipv4_cidr = "10.100.0.0/16" # Adjust based on your requirements
+    service_ipv4_cidr = "10.100.0.0/16"
   }
 
-  enabled_cluster_log_types = []
+  enabled_cluster_log_types = var.enabled_cluster_log_types
 
-
-  tags = {
-      Name = "Premium EKS Cluster"
-      Env = "development"
-    }
+  tags = var.cluster_tags
 }
 
 resource "aws_eks_addon" "kube_proxy" {
@@ -60,4 +53,47 @@ resource "aws_eks_addon" "eks_pod_identity_agent" {
   addon_name   = "eks-pod-identity-agent"
 }
 
+resource "aws_iam_role" "node_group_role" {
+  name = "eks-node-group-role"
 
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "node_group_policies" {
+  for_each = toset(var.node_group_policies)
+
+  role       = aws_iam_role.node_group_role.name
+  policy_arn = each.value
+}
+
+resource "aws_eks_node_group" "example" {
+  cluster_name    = aws_eks_cluster.premium_cluster.name
+  node_group_name = "demo-${random_string.name_suffix.result}"
+  node_role_arn   = aws_iam_role.node_group_role.arn
+  subnet_ids      = var.private_subnet_ids
+
+  scaling_config {
+    desired_size = var.node_group_desired_size
+    max_size     = var.node_group_max_size
+    min_size     = var.node_group_min_size
+  }
+
+  update_config {
+    max_unavailable = var.node_group_max_unavailable
+  }
+
+  depends_on = [aws_iam_role_policy_attachment.node_group_policies]
+
+  tags = var.node_group_tags
+}
