@@ -22,12 +22,25 @@ This Terraform module provisions an **Amazon Elastic Kubernetes Service (EKS)** 
 Include this module in your Terraform code:
 
 ```hcl
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.81.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "ap-south-1"
+}
+
 module "eks_cluster" {
-  source                  = "./path-to-your-eks-module"
-//  source = "registry.terraform.io/<your-username>/<module-name>/<version>"
+  source = "ahmadrazalab/eks-m/aws"
+  version = "v1.0.0" # Replace with the version you published
   eks_cluster_role_arn    = "arn:aws:iam::123456789012:role/eks-cluster-role"
   private_subnet_ids      = ["subnet-0198d10b83f4389a0", "subnet-0f4566efb7ac51c04", "subnet-0dfd99820b62e7ae7"]
-  enabled_cluster_log_types = ["api", "audit"]
+  enabled_cluster_log_types = []
   cluster_tags            = {
     Name = "My Custom EKS Cluster"
     Env  = "production"
@@ -36,10 +49,10 @@ module "eks_cluster" {
     "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
     "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   ]
-  node_group_desired_size = 2
+  node_group_desired_size = 1
   node_group_max_size     = 5
   node_group_min_size     = 1
-  node_group_max_unavailable = 2
+  node_group_max_unavailable = 1
   node_group_tags = {
     Name = "Custom EKS Node Group"
     Env  = "production"
@@ -126,26 +139,39 @@ The module provides the following outputs:
 Here’s a complete example:
 
 ```hcl
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.81.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "ap-south-1"
+}
+
 module "eks_cluster" {
-  source                  = "./eks-module"
+  source = "ahmadrazalab/eks-m/aws"
+  version = "v1.0.0" # Replace with the version you published
   eks_cluster_role_arn    = "arn:aws:iam::123456789012:role/eks-cluster-role"
   private_subnet_ids      = ["subnet-0198d10b83f4389a0", "subnet-0f4566efb7ac51c04", "subnet-0dfd99820b62e7ae7"]
-  enabled_cluster_log_types = ["api", "audit"]
+  enabled_cluster_log_types = []
   cluster_tags            = {
-    Name = "Production EKS Cluster"
+    Name = "My Custom EKS Cluster"
     Env  = "production"
   }
   node_group_policies     = [
     "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
-    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
-    "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   ]
-  node_group_desired_size = 3
-  node_group_max_size     = 6
-  node_group_min_size     = 2
-  node_group_max_unavailable = 2
+  node_group_desired_size = 1
+  node_group_max_size     = 5
+  node_group_min_size     = 1
+  node_group_max_unavailable = 1
   node_group_tags = {
-    Name = "Production EKS Node Group"
+    Name = "Custom EKS Node Group"
     Env  = "production"
   }
 }
@@ -160,11 +186,6 @@ module "eks_cluster" {
 
 ---
 
-## License
-
-This module is open-sourced under the MIT license. See `LICENSE` for details.
-
----
 
 ## Contributing
 
@@ -172,4 +193,3 @@ Feel free to open issues or submit pull requests to improve the module.
 
 --- 
 
-Let me know if you need any additional details!
