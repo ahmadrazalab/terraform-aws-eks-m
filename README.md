@@ -24,6 +24,7 @@ Include this module in your Terraform code:
 ```hcl
 module "eks_cluster" {
   source                  = "./path-to-your-eks-module"
+//  source = "registry.terraform.io/<your-username>/<module-name>/<version>"
   eks_cluster_role_arn    = "arn:aws:iam::123456789012:role/eks-cluster-role"
   private_subnet_ids      = ["subnet-0198d10b83f4389a0", "subnet-0f4566efb7ac51c04", "subnet-0dfd99820b62e7ae7"]
   enabled_cluster_log_types = ["api", "audit"]
