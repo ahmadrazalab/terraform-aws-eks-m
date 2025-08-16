@@ -12,7 +12,7 @@ resource "aws_eks_cluster" "premiumcluster" {
 
 
 # bootstrap_cluster_creator_admin_permissions - (Optional) Whether or not to bootstrap the access config values to the cluster. Default is true.
-  bootstrap_self_managed_addons = true
+  bootstrap_self_managed_addons = false   # must be set to false if you want to use eks auto mode 
   upgrade_policy {
     support_type = "STANDARD"
   }
@@ -39,6 +39,8 @@ resource "aws_eks_cluster" "premiumcluster" {
   vpc_config {
     endpoint_private_access = true
     endpoint_public_access  = false
+    # public_access_cidrs     = ["0.0.0.0/0"]
+    # security_group_ids      = [aws_security_group.cluster.id]
 
     subnet_ids = var.private_subnet_ids
   }
