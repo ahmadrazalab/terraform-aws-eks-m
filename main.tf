@@ -4,12 +4,15 @@ resource "aws_eks_cluster" "premiumcluster" {
 
   access_config {
     authentication_mode = "API"
+    # delete_protection   = false
   }
 
   role_arn = aws_iam_role.cluster.arn
 
   bootstrap_self_managed_addons = false
-
+  upgrade_policy {
+    support_type = "STANDARD"
+  }
   compute_config {
     enabled       = true
     node_pools    = ["general-purpose"]
@@ -30,7 +33,7 @@ resource "aws_eks_cluster" "premiumcluster" {
 
   vpc_config {
     endpoint_private_access = true
-    endpoint_public_access  = true
+    endpoint_public_access  = false
 
     subnet_ids = var.private_subnet_ids
   }
