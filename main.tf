@@ -9,13 +9,18 @@ resource "aws_eks_cluster" "premiumcluster" {
 
   role_arn = aws_iam_role.cluster.arn
 
-  bootstrap_self_managed_addons = false
+
+
+# bootstrap_cluster_creator_admin_permissions - (Optional) Whether or not to bootstrap the access config values to the cluster. Default is true.
+  bootstrap_self_managed_addons = true
   upgrade_policy {
     support_type = "STANDARD"
   }
   compute_config {
     enabled       = true
-    node_pools    = ["general-purpose"]
+ # system is for addon and system containers and general-purpose is for user workloads,
+ #  if you only use general-purpose, you can remove this line the it will deploy system workloads in the general-purpose node pool
+    node_pools    = ["general-purpose"] 
     node_role_arn = aws_iam_role.node.arn
   }
 
