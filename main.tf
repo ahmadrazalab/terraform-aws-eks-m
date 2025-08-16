@@ -1,12 +1,12 @@
 resource "aws_eks_cluster" "premiumcluster" {
-  name = var.cluster_name
+  name    = var.cluster_name
+  version = var.cluster_version
 
   access_config {
     authentication_mode = "API"
   }
 
   role_arn = aws_iam_role.cluster.arn
-  version  = "1.33"
 
   bootstrap_self_managed_addons = false
 
@@ -32,11 +32,7 @@ resource "aws_eks_cluster" "premiumcluster" {
     endpoint_private_access = true
     endpoint_public_access  = true
 
-    subnet_ids = [
-      aws_subnet.az1.id,
-      aws_subnet.az2.id,
-      aws_subnet.az3.id,
-    ]
+    subnet_ids = var.private_subnet_ids
   }
 
   # Ensure that IAM Role permissions are created before and deleted
